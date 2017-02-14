@@ -70,19 +70,56 @@ window.onload = function(){
 
 	gl.enable(gl.DEPTH_TEST);
 
-	var colors = 
-	[
-		new Float32Array([0.6,0.1,0.5,1]),
-		new Float32Array([0,0,1,1]),
-		new Float32Array([0,1,0,1]),
-		new Float32Array([0,1,1,1]),
-		new Float32Array([1,0,0,1]),
-		new Float32Array([1,0,1,1]),
-		new Float32Array([0.65, 0.6, 0.8, 1]),
-		new Float32Array([0.8,0.7,0.5,1]),
-	]
+	////////////////// Sphere generation. ///////////////////
+	var sphereVertices = [];
+    var normalData = [];
+    var textureCoordData = [];
+    var latitudeBands = 30;
+    var longitudeBands = 30;
+    var radius = 10;
+    for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
+      var theta = latNumber * Math.PI / latitudeBands;
+      var sinTheta = Math.sin(theta);
+      var cosTheta = Math.cos(theta);
 
-	
+      for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+        var phi = longNumber * 2 * Math.PI / longitudeBands;
+        var sinPhi = Math.sin(phi);
+        var cosPhi = Math.cos(phi);
+
+        var x = cosPhi * sinTheta;
+        var y = cosTheta;
+        var z = sinPhi * sinTheta;
+        var u = 1 - (longNumber / longitudeBands);
+        var v = 1 - (latNumber / latitudeBands);
+
+        normalData.push(x);
+        normalData.push(y);
+        normalData.push(z);
+        textureCoordData.push(u);
+        textureCoordData.push(v);
+        sphereVertices.push(radius * x);
+        sphereVertices.push(radius * y);
+        sphereVertices.push(radius * z);       
+      }
+    }
+    var sphereIndices = []; 
+    for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
+      for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
+        var first = (latNumber * (longitudeBands + 1)) + longNumber;
+        var second = first + longitudeBands + 1;
+        sphereIndices.push(first);
+        sphereIndices.push(second);
+        sphereIndices.push(first + 1);
+
+        sphereIndices.push(second);
+        sphereIndices.push(second + 1);
+        sphereIndices.push(first + 1);
+      }
+    }
+    console.log(textureCoordData);
+    /////////////////////////////////////////////////////////
+
 
 	var vertexBuffer = gl.createBuffer(); // Chunk of memory on GPU that is ready to use.
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer); // The active buffer is now an ARRAY_BUFFER, vertexBuffer.
@@ -146,9 +183,6 @@ window.onload = function(){
 	var zPos = 0;
 	var yPos = 0;
 
-	var getColor = function(pos){
-		return colors[(pos + colorOffset) % 8]
-	}
 	document.onkeydown = function(e){
 		e = e || window.event;
 		switch(e.keyCode){
@@ -161,9 +195,6 @@ window.onload = function(){
 				fovY++;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
-				break;
-			case 67: // c
-				colorOffset++;
 				break;
 			case 37: // left
 				heading -= 4;
@@ -226,6 +257,8 @@ window.onload = function(){
 		[ 20, 0, 0]
 	]
 
+	var scale = 1;
+
 	// Render Loop
 	var loop = function(){
 		gl.clearColor(0.75, 0.85, 0.8, 1.0); // R G B A
@@ -255,7 +288,7 @@ window.onload = function(){
 			mat4.mul(worldMatrix, navigationMatrix, worldMatrix);
 			
 			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
-		 	gl.uniform4fv(vertColor, getColor(i));
+//		 	gl.uniform4fv(vertColor, getColor(i));
 			gl.drawElements(gl.TRIANGLES, sphereIndices.length , gl.UNSIGNED_SHORT, 0);
 
 			gl.activeTexture(gl.TEXTURE0);
