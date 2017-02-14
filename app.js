@@ -74,8 +74,11 @@ void main(){
 window.onload = function(){
 	console.log("Starting.")
 	var canvas = document.getElementById('webgl-canvas');
-	canvas.width  = window.innerWidth;
-	canvas.height = window.innerHeight;
+	canvas.width  = window.innerWidth - 100;
+	canvas.height = window.innerHeight - 100;
+
+	var searchBox = document.getElementById("championSearch");
+
 
 	var gl = canvas.getContext('webgl'); // For Chrome and Firefox, all that's needed.
 
@@ -108,40 +111,71 @@ window.onload = function(){
 
 	gl.enable(gl.DEPTH_TEST);
 
+
+	////////////////// Icon generation. /////////////////////
+	// brutal hack
+	var sphereVertices = [
+		1.0, 1.0, 1.0,    
+		1.0, -1.0, 1.0,    
+		-1.0, -1.0, 1.0,   
+		-1.0, 1.0, 1.0 
+	];
+	var sphereIndices = [
+		1,0,2,3,2,0
+	]
+	var textureCoordData = [
+		0,0,
+		0,1,
+		1,1,
+		1,0
+	]
+	var normalData = [
+		1.0, 1.0, 1.0,    
+		1.0, -1.0, 1.0,    
+		-1.0, -1.0, 1.0,   
+		-1.0, 1.0, 1.0 
+	]
+
+	var vertexOffset = sphereVertices.length;
+	var indiceOffset = sphereIndices.length;
+	var textureOffset = textureCoordData.length;
+	var normalOffset = normalData.length;
+
+
 	////////////////// Sphere generation. ///////////////////
-	var sphereVertices = [];
-    var normalData = [];
-    var textureCoordData = [];
+	//var sphereVertices = [];
+    //var normalData = [];
+    //var textureCoordData = [];
+    //var sphereIndices = []; 
     var latitudeBands = 30;
     var longitudeBands = 30;
     var radius = 10;
     for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
-      var theta = latNumber * Math.PI / latitudeBands;
-      var sinTheta = Math.sin(theta);
-      var cosTheta = Math.cos(theta);
+    	var theta = latNumber * Math.PI / latitudeBands;
+     	var sinTheta = Math.sin(theta);
+      	var cosTheta = Math.cos(theta);
 
-      for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
-        var phi = longNumber * 2 * Math.PI / longitudeBands;
-        var sinPhi = Math.sin(phi);
-        var cosPhi = Math.cos(phi);
+      	for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+        	var phi = longNumber * 2 * Math.PI / longitudeBands;
+        	var sinPhi = Math.sin(phi);
+        	var cosPhi = Math.cos(phi);
 
-        var x = cosPhi * sinTheta;
-        var y = cosTheta;
-        var z = sinPhi * sinTheta;
-        var u = 1 - (longNumber / longitudeBands);
-        var v = 1 - (latNumber / latitudeBands);
+	        var x = cosPhi * sinTheta;
+	        var y = cosTheta;
+	        var z = sinPhi * sinTheta;
+	        var u = 1 - (longNumber / longitudeBands);
+	        var v = 1 - (latNumber / latitudeBands);
 
-        normalData.push(x);
-        normalData.push(y);
-        normalData.push(z);
-        textureCoordData.push(u);
-        textureCoordData.push(v);
-        sphereVertices.push(radius * x);
-        sphereVertices.push(radius * y);
-        sphereVertices.push(radius * z);
-      }
+	        normalData.push(x);
+	        normalData.push(y);
+	        normalData.push(z);
+	        textureCoordData.push(u);
+	        textureCoordData.push(v);
+	        sphereVertices.push(radius * x);
+	        sphereVertices.push(radius * y);
+	        sphereVertices.push(radius * z);       
+	    }
     }
-    var sphereIndices = [];
     for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
       for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
         var first = (latNumber * (longitudeBands + 1)) + longNumber;
@@ -154,6 +188,10 @@ window.onload = function(){
         sphereIndices.push(second + 1);
         sphereIndices.push(first + 1);
       }
+    }
+
+    for(var i = indiceOffset; i < sphereIndices.length; i++){
+     	sphereIndices[i] += 4;
     }
     /////////////////////////////////////////////////////////
 
@@ -221,11 +259,15 @@ window.onload = function(){
 		return texture;
 	}
 
-	// Generate textures for each of the 134 champions.
+	// Generate textures for each of the 134 champions' roles.
 	var imageArray = [];
 	for(var i = 0; i < championData.length; i++){
 		console.log(championData[i].key);
-		imageArray.push("textures/" + championData[i].key);
+		for(var j = 0; j < championData[i].roles.length; j++){
+			//imageArray.push("textures/" + championData[i].key);
+			imageArray.push("textures/" + championData[i].roles[j].name);
+			console.log(j);
+		}
 	}
 	var textureArray = [];
 	for(var i = 0; i < imageArray.length; i++){
@@ -276,6 +318,27 @@ window.onload = function(){
 	//gl.uniform1fv(attenuation_factorLoc, lights.lightAttenuation);
 
 	//////////////////////////////////////////////////////
+
+	// Generate textures for each of the champion icons.
+	var iconImageArray = [];
+	for(var i = 0; i < championData.length; i++){
+		iconImageArray.push("textures/" + championData[i].key);
+	}
+	var iconTextureArray = [];
+	for(var i = 0; i < iconImageArray.length; i++){
+	 	iconTextureArray.push(gl.createTexture());
+	 	initializeTexture(iconTextureArray[i], iconImageArray[i]);
+	}
+
+	var roleImageArray = ["textures/ADC","textures/Middle","textures/Jungle","textures/Support", "textures/Top"];
+	var roleTextureArray = [];
+	for(var i = 0; i < iconImageArray.length; i++){
+	 	roleTextureArray.push(gl.createTexture());
+	 	initializeTexture(roleTextureArray[i], roleImageArray[i]);
+	}
+
+	///////////////////////////////////////////////////////
+
 	var vertColor = gl.getUniformLocation(program, 'vertColor');
 	var mWorldLoc = gl.getUniformLocation(program, 'mWorld');
 	var mViewLoc = gl.getUniformLocation(program, 'mView');
@@ -291,10 +354,12 @@ window.onload = function(){
 	var cameraWorldNormalMatrixHelper = new Float32Array(16);
 	var cameraWorldNormalMatrix = new Float32Array(9);
 
-	var posY = 0.0;
+	var yPos = 0.0;
+	var xPos = 0;
+	var zPos = 0;
 	var fovY = 45;
 	mat4.identity(worldMatrix);
-	mat4.lookAt(viewMatrix, [0, posY, -50], [0.0,posY,0], [0,1,0]); // Eye, Point, Up. The camera is initialized using lookAt. I promise I don't use it anywhere else!
+	mat4.lookAt(viewMatrix, [xPos, yPos, -50], [xPos,yPos,0], [0,1,0]); // Eye, Point, Up. The camera is initialized using lookAt. I promise I don't use it anywhere else!
  	mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 
 	// This is how we set variables in the shader. second variable must always be FALSE.
@@ -317,27 +382,50 @@ window.onload = function(){
 
 	mat4.identity(identityMatrix);
 	mat4.identity(crosshairMatrix);
-
-	function setView() {
-		gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
-	}
-
-	var crosshairOn = 0;
 	var heading = 0; // Degrees
-	var colorOffset = 0;
-	var xPos = 0;
-	var zPos = 0;
-	var yPos = 0;
+
+	// Begin by resetting.
+	yPos = -12;
+	xPos = -8 * 10;
+	zPos = 0;
+	mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
+	mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
+	gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
+
+	fovY = 45;
+	mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
+	gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
+	heading = 0;
+
 
 	document.onkeydown = function(e){
 		e = e || window.event;
 		switch(e.keyCode){
-			case 78: // n (narrower fov)
+			case 13:
+				var champName = searchBox.value.charAt(0).toUpperCase() + searchBox.value.slice(1).toLowerCase();
+				var champIndex = championData.findIndex(function(element){
+					return element.key == champName;
+				});
+				console.log(champName, champIndex);
+
+				if(champIndex <70){
+					xPos = champIndex * -4;
+					console.log("xPos:",xPos); 
+					yPos = +3;
+				}
+				else{
+					xPos =  -4 * (champIndex-70);
+					console.log("xPos:",xPos);
+					yPos = -(-3 + 13);
+				}
+
+				break;
+			case 187: // n (narrower fov)
 				fovY--;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
 				break;
-			case 87: // wider fov
+			case 189: // wider fov
 				fovY++;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
@@ -349,7 +437,7 @@ window.onload = function(){
 				gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
 				break;
 			case 38: // up
-				yPos -= 0.25;
+				yPos -= 0.5;
 				break;
 			case 39: // right
 				heading += 4;
@@ -358,11 +446,11 @@ window.onload = function(){
 				gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
 				break;
 			case 40: // down
-				yPos += 0.25
-				break;
-			case 82: // r - reset
-				yPos = 0;
-				xPos = 0;
+				yPos += 0.5
+				break; 
+			case 32: // space - reset
+				yPos = -12;
+				xPos = -8 * 10;
 				zPos = 0;
 				mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
 				mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
@@ -389,29 +477,51 @@ window.onload = function(){
 				zPos += Math.cos(glMatrix.toRadian(heading));
 				xPos -= Math.sin(glMatrix.toRadian(heading));
 				break;
-			case 187: // + - crosshair
-				if(crosshairOn)
-					crosshairOn = 0;
-				else
-					crosshairOn = 1;
-				break;
 		}
 	}
 
+	var horSpacing = 4;
+	var verSpacing = 13;
+	var maxRowSize = 70;
 	var translationVectors = [];
-
-	 console.log(championData.length);
+	var percentPlayed = [];
+	console.log(championData.length);
 	for(var i = 0; i < championData.length; i++){
-	 	translationVectors.push([20*i, 0, 0]);
+		for(var j = 0; j < championData[i].roles.length; j++){
+			if(i < maxRowSize){ // Bottom Row
+	 			translationVectors.push([horSpacing * i, 5 * j, 0]);
+		 		percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+	 		}
+	 		else{
+	 			translationVectors.push([horSpacing * (i-maxRowSize), 5 * j + verSpacing, 16]);
+	 			percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+	 		}
+		}
 	}
 
-	var scale = 1;
+	var iconTranslationVectors = [];
+	for(var i = 0; i < championData.length; i++){
+		if(i < maxRowSize) {// Bottom Row
+		 	iconTranslationVectors.push([horSpacing * i, -3, -2]);
+		 	console.log(horSpacing * i, championData[i].key)
+		}
+		else{
+			iconTranslationVectors.push([horSpacing*(i-maxRowSize), -3 + verSpacing, 14]);
+			console.log(horSpacing * i, championData[i].key)
+
+		}
+
+	}
+
+	console.log("sphereindices: " , indiceOffset);
+
+
+	var globalScale = 0.2;
 
 	// Render Loop
 	var loop = function(){
-		gl.clearColor(0.75, 0.85, 0.8, 1.0); // R G B A
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+		gl.clearColor(0.60, 0.7, 0.9, 1.0); // R G B A
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
 		theta = performance.now() / 1000 / 6 *  2 * Math.PI;
 
 		// I use two rotation matrices for a more interesting rotation effect.
@@ -422,10 +532,14 @@ window.onload = function(){
 		// Navigation - I move the world instead of the camera.
 		mat4.translate(navigationMatrix, identityMatrix, [xPos, yPos, zPos]);
 
-		// Each cube is scaled by the same amount.
-		mat4.scale(scalingMatrix, identityMatrix, [scale,scale,scale]);
-
+		// For each of the champions' roles...
 		for(var i = 0; i < translationVectors.length; i++){
+
+			scale = globalScale * percentPlayed[i];
+
+			mat4.scale(scalingMatrix, identityMatrix, [scale,scale,scale]);
+
+
 			mat4.translate(translationMatrix, identityMatrix, translationVectors[i]);
 
 			// Scale, rotate, translate.
@@ -444,12 +558,50 @@ window.onload = function(){
 			gl.uniformMatrix3fv(mCameraWorldNormalLoc, gl.FALSE, cameraWorldNormalMatrix);
 
 			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
-//		 	gl.uniform4fv(vertColor, getColor(i));
-			gl.drawElements(gl.TRIANGLES, sphereIndices.length , gl.UNSIGNED_SHORT, 0);
+
 
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, textureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset, gl.UNSIGNED_SHORT, indiceOffset * 2 );
+
+		}
+		// Draw each of the icons
+		for(var i = 0; i < iconTranslationVectors.length; i++){
+			// icons
+			mat4.translate(translationMatrix, identityMatrix, iconTranslationVectors[i]);
+			mat4.identity(worldMatrix);
+			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
+			mat4.mul(worldMatrix, navigationMatrix, worldMatrix);
+			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
+
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, iconTextureArray[i]);
+			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, indiceOffset, gl.UNSIGNED_SHORT, 0);
+		}
+
+		// Draw each of the role for reference
+		for(var i = 0; i < 5; i++){
+			mat4.identity(worldMatrix);
+
+			// Keep the role icons centered.
+			if(i < 3)
+				mat4.translate(translationMatrix, identityMatrix, [i*4, 15, 0]);
+			else
+				mat4.translate(translationMatrix, identityMatrix, [(2-i)*4, 15, 0]);
+
+			mat4.scale(scalingMatrix, identityMatrix, [0.1,0.1,0.1]);
+			mat4.mul(worldMatrix, scalingMatrix, worldMatrix);
+			mat4.mul(worldMatrix, rotationMatrix, worldMatrix);
+			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
+
+			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
+
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, roleTextureArray[i]);
+			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2 );
 
 		}
 		requestAnimationFrame(loop);
