@@ -39,6 +39,7 @@ window.onload = function(){
 	canvas.width  = window.innerWidth;
 	canvas.height = window.innerHeight;
 
+
 	var gl = canvas.getContext('webgl'); // For Chrome and Firefox, all that's needed.
 
 
@@ -70,40 +71,71 @@ window.onload = function(){
 
 	gl.enable(gl.DEPTH_TEST);
 
+
+	////////////////// Icon generation. /////////////////////
+	// brutal hack
+	var sphereVertices = [
+		1.0, 1.0, 1.0,    
+		1.0, -1.0, 1.0,    
+		-1.0, -1.0, 1.0,   
+		-1.0, 1.0, 1.0 
+	];
+	var sphereIndices = [
+		1,0,2,3,2,0
+	]
+	var textureCoordData = [
+		0,0,
+		0,1,
+		1,1,
+		1,0
+	]
+	var normalData = [
+		1.0, 1.0, 1.0,    
+		1.0, -1.0, 1.0,    
+		-1.0, -1.0, 1.0,   
+		-1.0, 1.0, 1.0 
+	]
+
+	var vertexOffset = sphereVertices.length;
+	var indiceOffset = sphereIndices.length;
+	var textureOffset = textureCoordData.length;
+	var normalOffset = normalData.length;
+
+
 	////////////////// Sphere generation. ///////////////////
-	var sphereVertices = [];
-    var normalData = [];
-    var textureCoordData = [];
+	//var sphereVertices = [];
+    //var normalData = [];
+    //var textureCoordData = [];
+    //var sphereIndices = []; 
     var latitudeBands = 30;
     var longitudeBands = 30;
     var radius = 10;
     for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
-      var theta = latNumber * Math.PI / latitudeBands;
-      var sinTheta = Math.sin(theta);
-      var cosTheta = Math.cos(theta);
+    	var theta = latNumber * Math.PI / latitudeBands;
+     	var sinTheta = Math.sin(theta);
+      	var cosTheta = Math.cos(theta);
 
-      for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
-        var phi = longNumber * 2 * Math.PI / longitudeBands;
-        var sinPhi = Math.sin(phi);
-        var cosPhi = Math.cos(phi);
+      	for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+        	var phi = longNumber * 2 * Math.PI / longitudeBands;
+        	var sinPhi = Math.sin(phi);
+        	var cosPhi = Math.cos(phi);
 
-        var x = cosPhi * sinTheta;
-        var y = cosTheta;
-        var z = sinPhi * sinTheta;
-        var u = 1 - (longNumber / longitudeBands);
-        var v = 1 - (latNumber / latitudeBands);
+	        var x = cosPhi * sinTheta;
+	        var y = cosTheta;
+	        var z = sinPhi * sinTheta;
+	        var u = 1 - (longNumber / longitudeBands);
+	        var v = 1 - (latNumber / latitudeBands);
 
-        normalData.push(x);
-        normalData.push(y);
-        normalData.push(z);
-        textureCoordData.push(u);
-        textureCoordData.push(v);
-        sphereVertices.push(radius * x);
-        sphereVertices.push(radius * y);
-        sphereVertices.push(radius * z);       
-      }
+	        normalData.push(x);
+	        normalData.push(y);
+	        normalData.push(z);
+	        textureCoordData.push(u);
+	        textureCoordData.push(v);
+	        sphereVertices.push(radius * x);
+	        sphereVertices.push(radius * y);
+	        sphereVertices.push(radius * z);       
+	    }
     }
-    var sphereIndices = []; 
     for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
       for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
         var first = (latNumber * (longitudeBands + 1)) + longNumber;
@@ -169,12 +201,13 @@ window.onload = function(){
 		return texture;
 	}
 
-	// Generate textures for each of the 134 champions.
+	// Generate textures for each of the 134 champions' roles.
 	var imageArray = [];
 	for(var i = 0; i < championData.length; i++){
 		console.log(championData[i].key);
 		for(var j = 0; j < championData[i].roles.length; j++){
-			imageArray.push("textures/" + championData[i].key);
+			//imageArray.push("textures/" + championData[i].key);
+			imageArray.push("textures/" + championData[i].roles[j].name);
 			console.log(j);
 		}
 	}
@@ -183,8 +216,26 @@ window.onload = function(){
 	 	textureArray.push(gl.createTexture());
 	 	initializeTexture(textureArray[i], imageArray[i]);
 	}
-	///////////////////////////////////////////////////////
 
+	// Generate textures for each of the champion icons.
+	var iconImageArray = [];
+	for(var i = 0; i < championData.length; i++){
+		iconImageArray.push("textures/" + championData[i].key);
+	}
+	var iconTextureArray = [];
+	for(var i = 0; i < iconImageArray.length; i++){
+	 	iconTextureArray.push(gl.createTexture());
+	 	initializeTexture(iconTextureArray[i], iconImageArray[i]);
+	}
+
+	var roleImageArray = ["textures/ADC","textures/Middle","textures/Jungle","textures/Support", "textures/Top"];
+	var roleTextureArray = [];
+	for(var i = 0; i < iconImageArray.length; i++){
+	 	roleTextureArray.push(gl.createTexture());
+	 	initializeTexture(roleTextureArray[i], roleImageArray[i]);
+	}
+
+	///////////////////////////////////////////////////////
 
 	var vertColor = gl.getUniformLocation(program, 'vertColor');
 	var mWorldLoc = gl.getUniformLocation(program, 'mWorld');
@@ -196,10 +247,12 @@ window.onload = function(){
 	var viewMatrix = new Float32Array(16);
 	var projMatrix = new Float32Array(16);
 
-	var posY = 0.0;
+	var yPos = 0.0;
+	var xPos = 0;
+	var zPos = 0;
 	var fovY = 45;
 	mat4.identity(worldMatrix);
-	mat4.lookAt(viewMatrix, [0, posY, -50], [0.0,posY,0], [0,1,0]); // Eye, Point, Up. The camera is initialized using lookAt. I promise I don't use it anywhere else!
+	mat4.lookAt(viewMatrix, [xPos, yPos, -50], [xPos,yPos,0], [0,1,0]); // Eye, Point, Up. The camera is initialized using lookAt. I promise I don't use it anywhere else!
  	mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 
 	// This is how we set variables in the shader. second variable must always be FALSE.
@@ -221,12 +274,21 @@ window.onload = function(){
 	mat4.identity(identityMatrix);
 	mat4.identity(crosshairMatrix);
 	
-	var crosshairOn = 0;
 	var heading = 0; // Degrees
-	var colorOffset = 0;
-	var xPos = 0;
-	var zPos = 0;
-	var yPos = 0;
+
+	// Begin by resetting.
+	yPos = -12;
+	xPos = -8 * 10;
+	zPos = 0;
+	mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
+	mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
+	gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
+
+	fovY = 45;
+	mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
+	gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
+	heading = 0;
+
 
 	document.onkeydown = function(e){
 		e = e || window.event;
@@ -260,8 +322,8 @@ window.onload = function(){
 				yPos += 0.25
 				break; 
 			case 82: // r - reset
-				yPos = -10;
-				xPos = -8 * 50;
+				yPos = -12;
+				xPos = -8 * 10;
 				zPos = 0;
 				mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
 				mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
@@ -288,28 +350,41 @@ window.onload = function(){
 				zPos += Math.cos(glMatrix.toRadian(heading));
 				xPos -= Math.sin(glMatrix.toRadian(heading));
 				break;
-			case 187: // + - crosshair
-				if(crosshairOn)
-					crosshairOn = 0;
-				else
-					crosshairOn = 1;
-				break;
 		}
 	}
 
+	var horSpacing = 4;
+	var verSpacing = 13;
+	var maxRowSize = 70;
 	var translationVectors = [];
 	var percentPlayed = [];
 	console.log(championData.length);
 	for(var i = 0; i < championData.length; i++){
 		for(var j = 0; j < championData[i].roles.length; j++){
-	 		translationVectors.push([6*i, 5 * j, 0]);
-	 		percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+			if(i < maxRowSize){ // Bottom Row
+	 			translationVectors.push([horSpacing * i, 5 * j, 0]);
+		 		percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+	 		}
+	 		else{
+	 			translationVectors.push([horSpacing * (i-maxRowSize), 5 * j + verSpacing, 16]);
+	 			percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+	 		}
 		}
 	}
 
-	var globalScale = 0.2;
-	var scale = globalScale;
+	var iconTranslationVectors = [];
+	for(var i = 0; i < championData.length; i++){
+		if(i < maxRowSize) // Bottom Row
+		 	iconTranslationVectors.push([horSpacing * i, -3, -2]);
+		else
+			iconTranslationVectors.push([horSpacing*(i-maxRowSize), -3 + verSpacing, 14]);
 
+	}
+
+
+
+
+	var globalScale = 0.2;
 
 	// Render Loop
 	var loop = function(){
@@ -330,8 +405,8 @@ window.onload = function(){
 		for(var i = 0; i < translationVectors.length; i++){
 
 			scale = globalScale * percentPlayed[i];
-			
-		mat4.scale(scalingMatrix, identityMatrix, [scale,scale,scale]);
+
+			mat4.scale(scalingMatrix, identityMatrix, [scale,scale,scale]);
 
 
 			mat4.translate(translationMatrix, identityMatrix, translationVectors[i]);
@@ -350,9 +425,42 @@ window.onload = function(){
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, textureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
-			gl.drawElements(gl.TRIANGLES, sphereIndices.length , gl.UNSIGNED_SHORT, 0);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2);
 
 		}
+		// Draw each of the icons
+		for(var i = 0; i < iconTranslationVectors.length; i++){
+			// icons
+			mat4.translate(translationMatrix, identityMatrix, iconTranslationVectors[i]);
+			mat4.identity(worldMatrix);
+			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
+			mat4.mul(worldMatrix, navigationMatrix, worldMatrix);
+			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
+
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, iconTextureArray[i]);
+			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, indiceOffset , gl.UNSIGNED_SHORT, 0);
+		}
+
+		// Draw each of the role for reference
+		for(var i = 0; i < 5; i++){
+			mat4.identity(worldMatrix);
+			mat4.translate(translationMatrix, identityMatrix, [i*3, 15, 0]);
+			mat4.scale(scalingMatrix, identityMatrix, [0.1,0.1,0.1]);
+			mat4.mul(worldMatrix, scalingMatrix, worldMatrix);
+			mat4.mul(worldMatrix, rotationMatrix, worldMatrix);
+			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
+
+			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
+
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, roleTextureArray[i]);
+			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2);
+
+		}
+
 		requestAnimationFrame(loop); 
 	}
 	requestAnimationFrame(loop);
