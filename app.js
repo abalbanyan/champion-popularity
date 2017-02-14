@@ -173,7 +173,10 @@ window.onload = function(){
 	var imageArray = [];
 	for(var i = 0; i < championData.length; i++){
 		console.log(championData[i].key);
-		imageArray.push("textures/" + championData[i].key);
+		for(var j = 0; j < championData[i].roles.length; j++){
+			imageArray.push("textures/" + championData[i].key);
+			console.log(j);
+		}
 	}
 	var textureArray = [];
 	for(var i = 0; i < imageArray.length; i++){
@@ -257,8 +260,8 @@ window.onload = function(){
 				yPos += 0.25
 				break; 
 			case 82: // r - reset
-				yPos = 0;
-				xPos = 0;
+				yPos = -10;
+				xPos = -8 * 50;
 				zPos = 0;
 				mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
 				mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
@@ -295,13 +298,18 @@ window.onload = function(){
 	}
 
 	var translationVectors = [];
-
-	 console.log(championData.length);
+	var percentPlayed = [];
+	console.log(championData.length);
 	for(var i = 0; i < championData.length; i++){
-	 	translationVectors.push([20*i, 0, 0]);
+		for(var j = 0; j < championData[i].roles.length; j++){
+	 		translationVectors.push([6*i, 5 * j, 0]);
+	 		percentPlayed.push(championData[i].roles[j].percentPlayed / 100);
+		}
 	}
 
-	var scale = 1;
+	var globalScale = 0.2;
+	var scale = globalScale;
+
 
 	// Render Loop
 	var loop = function(){
@@ -318,10 +326,14 @@ window.onload = function(){
 		// Navigation - I move the world instead of the camera.
 		mat4.translate(navigationMatrix, identityMatrix, [xPos, yPos, zPos]);
 
-		// Each cube is scaled by the same amount.
+		// For each of the champions' roles...
+		for(var i = 0; i < translationVectors.length; i++){
+
+			scale = globalScale * percentPlayed[i];
+			
 		mat4.scale(scalingMatrix, identityMatrix, [scale,scale,scale]);
 
-		for(var i = 0; i < translationVectors.length; i++){
+
 			mat4.translate(translationMatrix, identityMatrix, translationVectors[i]);
 
 			// Scale, rotate, translate.
@@ -330,14 +342,15 @@ window.onload = function(){
 			mat4.mul(worldMatrix, rotationMatrix, worldMatrix);
 			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
 			mat4.mul(worldMatrix, navigationMatrix, worldMatrix);
+
 			
 			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
-//		 	gl.uniform4fv(vertColor, getColor(i));
-			gl.drawElements(gl.TRIANGLES, sphereIndices.length , gl.UNSIGNED_SHORT, 0);
+
 
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, textureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length , gl.UNSIGNED_SHORT, 0);
 
 		}
 		requestAnimationFrame(loop); 
