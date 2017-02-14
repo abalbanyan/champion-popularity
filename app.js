@@ -36,8 +36,10 @@ void main(){
 window.onload = function(){
 	console.log("Starting.")
 	var canvas = document.getElementById('webgl-canvas');
-	canvas.width  = window.innerWidth;
-	canvas.height = window.innerHeight;
+	canvas.width  = window.innerWidth - 100;
+	canvas.height = window.innerHeight - 100;
+
+	var searchBox = document.getElementById("championSearch");
 
 
 	var gl = canvas.getContext('webgl'); // For Chrome and Firefox, all that's needed.
@@ -297,12 +299,31 @@ window.onload = function(){
 	document.onkeydown = function(e){
 		e = e || window.event;
 		switch(e.keyCode){
-			case 78: // n (narrower fov)
+			case 13:
+				var champName = searchBox.value.charAt(0).toUpperCase() + searchBox.value.slice(1).toLowerCase();
+				var champIndex = championData.findIndex(function(element){
+					return element.key == champName;
+				});
+				console.log(champName, champIndex);
+
+				if(champIndex <70){
+					xPos = champIndex * -4;
+					console.log("xPos:",xPos); 
+					yPos = +3;
+				}
+				else{
+					xPos =  -4 * (champIndex-70);
+					console.log("xPos:",xPos);
+					yPos = -(-3 + 13);
+				}
+
+				break;
+			case 187: // n (narrower fov)
 				fovY--;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
 				break;
-			case 87: // wider fov
+			case 189: // wider fov
 				fovY++;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
@@ -314,7 +335,7 @@ window.onload = function(){
 				gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
 				break;
 			case 38: // up
-				yPos -= 0.25;
+				yPos -= 0.5;
 				break;
 			case 39: // right
 				heading += 4;
@@ -323,9 +344,9 @@ window.onload = function(){
 				gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
 				break;
 			case 40: // down
-				yPos += 0.25
+				yPos += 0.5
 				break; 
-			case 82: // r - reset
+			case 32: // r - reset
 				yPos = -12;
 				xPos = -8 * 10;
 				zPos = 0;
@@ -378,10 +399,15 @@ window.onload = function(){
 
 	var iconTranslationVectors = [];
 	for(var i = 0; i < championData.length; i++){
-		if(i < maxRowSize) // Bottom Row
+		if(i < maxRowSize) {// Bottom Row
 		 	iconTranslationVectors.push([horSpacing * i, -3, -2]);
-		else
+		 	console.log(horSpacing * i, championData[i].key)
+		}
+		else{
 			iconTranslationVectors.push([horSpacing*(i-maxRowSize), -3 + verSpacing, 14]);
+			console.log(horSpacing * i, championData[i].key)
+
+		}
 
 	}
 
@@ -450,7 +476,13 @@ window.onload = function(){
 		// Draw each of the role for reference
 		for(var i = 0; i < 5; i++){
 			mat4.identity(worldMatrix);
-			mat4.translate(translationMatrix, identityMatrix, [i*3, 15, 0]);
+
+			// Keep the role icons centered.
+			if(i < 3)
+				mat4.translate(translationMatrix, identityMatrix, [i*4, 15, 0]);
+			else
+				mat4.translate(translationMatrix, identityMatrix, [(2-i)*4, 15, 0]);
+
 			mat4.scale(scalingMatrix, identityMatrix, [0.1,0.1,0.1]);
 			mat4.mul(worldMatrix, scalingMatrix, worldMatrix);
 			mat4.mul(worldMatrix, rotationMatrix, worldMatrix);
