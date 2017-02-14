@@ -117,9 +117,7 @@ window.onload = function(){
         sphereIndices.push(first + 1);
       }
     }
-    console.log(textureCoordData);
     /////////////////////////////////////////////////////////
-
 
 	var vertexBuffer = gl.createBuffer(); // Chunk of memory on GPU that is ready to use.
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer); // The active buffer is now an ARRAY_BUFFER, vertexBuffer.
@@ -140,6 +138,50 @@ window.onload = function(){
 		0 // Offset from beginning of single vertex to this attribute.
 	);
 	gl.enableVertexAttribArray(positionAttribLocation);
+
+	/////////////////TEXTURES//////////////////////////////
+	// Create texture buffer.
+	var texCoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
+
+	var textureCoordAttribLocation = gl.getAttribLocation(program, 'textureCoord');
+	gl.enableVertexAttribArray(textureCoordAttribLocation);
+	gl.vertexAttribPointer(textureCoordAttribLocation, 2, gl.FLOAT, false, 0, 0);
+
+	// Load the textures.
+	var initializeTexture = function(texture, imgID){
+		var image = new Image()
+		image.onload = function(){
+			gl.bindTexture(gl.TEXTURE_2D, texture);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texImage2D(
+				gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				image
+			);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+		}
+		image.src = imgID;
+		return texture;
+	}
+
+	// Generate textures for each of the 134 champions.
+	var imageArray = [];
+	for(var i = 0; i < championData.length; i++){
+		console.log(championData[i].key);
+		imageArray.push("textures/" + championData[i].key);
+	}
+	var textureArray = [];
+	for(var i = 0; i < imageArray.length; i++){
+	 	textureArray.push(gl.createTexture());
+	 	initializeTexture(textureArray[i], imageArray[i]);
+	}
+	///////////////////////////////////////////////////////
+
 
 	var vertColor = gl.getUniformLocation(program, 'vertColor');
 	var mWorldLoc = gl.getUniformLocation(program, 'mWorld');
@@ -252,10 +294,12 @@ window.onload = function(){
 		}
 	}
 
-	var translationVectors = [
-		[ 0, 0, 0],
-		[ 20, 0, 0]
-	]
+	var translationVectors = [];
+
+	 console.log(championData.length);
+	for(var i = 0; i < championData.length; i++){
+	 	translationVectors.push([20*i, 0, 0]);
+	}
 
 	var scale = 1;
 
