@@ -2,7 +2,8 @@
 var vertexShaderText = `
 precision mediump float;
 
-attribute vec3 vertPosition;
+const int N_LIGHTS = 1; // number of lights!
+attribute vec3 vertPosition, vertNormal;
 
 attribute vec2 textureCoord;
 varying vec2 fragTexCoord;
@@ -12,24 +13,61 @@ uniform mat4 mView;
 uniform mat4 mProj;
 uniform vec4 vertColor;
 
+uniform mat4 camera_model_transform;
+uniform mat3 camera_model_transform_normal;
+
+uniform vec4 lightPosition[N_LIGHTS], lightColor[N_LIGHTS], shapeColor;
+uniform float ambient, diffusivity, shininess, smoothness, attenuation_factor[N_LIGHTS];
+
 varying vec4 vColor;
+varying vec3 N, E, pos;
+varying vec3 L[N_LIGHTS], H[N_LIGHTS];
+varying float dist[N_LIGHTS];
 
 void main(){
+	N = normalize( camera_model_transform_normal * vertNormal);
+	vec4 object_space_pos = vec4(vertPosition, 1.0);
+	pos = (camera_model_transform * object_space_pos).xyz;
+	E = normalize(-pos);
 	vColor = vertColor;
 	fragTexCoord = textureCoord;
-	gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);
+	gl_Position = mProj * mView * mWorld * object_space_pos;
+	for( int i = 0; i < N_LIGHTS; i++ ) {
+  	L[i] = normalize( ( mView * lightPosition[i] ).xyz - lightPosition[i].w * pos );   // Use w = 0 for a directional light -- a vector instead of a point.
+    H[i] = normalize( L[i] + E );
+
+		// Is it a point light source?  Calculate the distance to it from the object.  Otherwise use some arbitrary distance.
+		dist[i]  = lightPosition[i].w > 0.0 ? distance((mView * lightPosition[i]).xyz, pos) : distance( 0.5 * -lightPosition[i].xyz, object_space_pos.xyz );
+	}
 }`
 
 var fragmentShaderText = `
 precision mediump float;
-varying vec4 vColor;
 
+const int N_LIGHTS = 1; // number of lights!
+
+uniform vec4 lightColor[N_LIGHTS], shapeColor;
+varying vec4 vColor;
+varying vec3 N, E, pos;
+varying vec3 L[N_LIGHTS], H[N_LIGHTS];
+varying float dist[N_LIGHTS];
 varying vec2 fragTexCoord;
 uniform sampler2D textureSampler;
+uniform float ambient, diffusivity, shininess, smoothness, attenuation_factor[N_LIGHTS];
 
 void main(){
-	gl_FragColor = texture2D(textureSampler, fragTexCoord);                
-	//gl_FragColor = vColor;
+	vec4 tex_color = texture2D(textureSampler, fragTexCoord);
+	gl_FragColor = tex_color * ambient;
+	//+ vec4( shapeColor.xyz * ambient, shapeColor.w * tex_color.w);
+	for( int i = 0; i < N_LIGHTS; i++ )
+  {
+    float attenuation_multiplier = 1.0 / (1.0 + 0.5 * (dist[i] * dist[i]));
+    float diffuse  = 0.0; //TODO
+    float specular = 0.0; //TODO
+
+    gl_FragColor.xyz += attenuation_multiplier * (tex_color.xyz * diffusivity * diffuse  + lightColor[i].xyz * shininess * specular );
+  }
+  gl_FragColor.a = gl_FragColor.w;
 }`
 
 
@@ -46,7 +84,7 @@ window.onload = function(){
 
 
 	gl.clearColor(0.75, 0.85, 0.8, 1.0); // R G B A
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 	// Retrieved champion data using http://api.champion.gg/docs/.
 	console.log(championData[0].key, championData[0].roles[0].name, championData[0].roles[0].percentPlayed);
@@ -163,7 +201,7 @@ window.onload = function(){
 
 	var indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW); 
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
 
 	// Set attributes.
 	var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
@@ -176,6 +214,20 @@ window.onload = function(){
 		0 // Offset from beginning of single vertex to this attribute.
 	);
 	gl.enableVertexAttribArray(positionAttribLocation);
+
+	// Create normals buffer.
+	var normalBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
+
+	var indexNormalBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexNormalBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
+
+	// Set attributes of normals
+	var normalAttribLocation = gl.getAttribLocation(program, 'vertNormal');
+	gl.vertexAttribPointer(normalAttribLocation, 3, gl.FLOAT, gl.FALSE, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+	gl.enableVertexAttribArray(normalAttribLocation);
 
 	/////////////////TEXTURES//////////////////////////////
 	// Create texture buffer.
@@ -222,6 +274,50 @@ window.onload = function(){
 	 	textureArray.push(gl.createTexture());
 	 	initializeTexture(textureArray[i], imageArray[i]);
 	}
+	///////////////////////////////////////////////////////
+	//TODO: Setup lighting variables
+	var materialProperties = {
+		reflectAmbient: .4,
+		reflectDiffuse: .4,
+		reflectSpecular: .8,
+		smoothnessObj: 40,
+		shininessObj: 0.5
+	};
+
+	var lightPos = vec4.create();
+	vec4.set(lightPos, 30, 30, 34, 1);
+	var lightCol = vec4.create();
+	vec4.set(lightCol, 1, 1, 1, 1);
+	var shapeCol = vec4.create();
+	vec4.set(shapeCol, 0.5, 0.5, 0.5, 0);
+
+	var lights = [
+		{
+			lightPosition: lightPos,
+			lightColor: lightCol,
+			lightAttenuation: 1/100000
+		}
+	];
+
+	var lightPosLoc = gl.getUniformLocation(program, 'lightPosition');
+	var lightColorLoc = gl.getUniformLocation(program, 'lightColor');
+	var shapeColorLoc = gl.getUniformLocation(program, 'shapeColor');
+	var ambientLoc = gl.getUniformLocation(program, 'ambient');
+	var diffusivityLoc = gl.getUniformLocation(program, 'diffusivity');
+	var shininessLoc = gl.getUniformLocation(program, 'shininess');
+	var smoothnessLoc = gl.getUniformLocation(program, 'smoothness');
+	var attenuation_factorLoc = gl.getUniformLocation(program, 'attenuation_factor');
+
+	gl.uniform4fv(lightPosLoc, lightPos);
+	gl.uniform4fv(lightColorLoc, lightCol);
+	gl.uniform4fv(shapeColorLoc, shapeCol);
+	gl.uniform1f(ambientLoc, materialProperties.reflectAmbient);
+	gl.uniform1f(diffusivityLoc, materialProperties.reflectDiffuse);
+	gl.uniform1f(shininessLoc, materialProperties.shininessObj);
+	gl.uniform1f(smoothnessLoc, materialProperties.smoothnessObj);
+	//gl.uniform1fv(attenuation_factorLoc, lights.lightAttenuation);
+
+	//////////////////////////////////////////////////////
 
 	// Generate textures for each of the champion icons.
 	var iconImageArray = [];
@@ -247,11 +343,16 @@ window.onload = function(){
 	var mWorldLoc = gl.getUniformLocation(program, 'mWorld');
 	var mViewLoc = gl.getUniformLocation(program, 'mView');
 	var mProjLoc = gl.getUniformLocation(program, 'mProj');
+	var mCameraWorldLoc = gl.getUniformLocation(program, 'camera_model_transform');
+	var mCameraWorldNormalLoc = gl.getUniformLocation(program, 'camera_model_transform_normal');
 
 	// These are all initiliazed to 0.
 	var worldMatrix = new Float32Array(16);
 	var viewMatrix = new Float32Array(16);
 	var projMatrix = new Float32Array(16);
+	var cameraWorldMatrix = new Float32Array(16);
+	var cameraWorldNormalMatrixHelper = new Float32Array(16);
+	var cameraWorldNormalMatrix = new Float32Array(9);
 
 	var yPos = 0.0;
 	var xPos = 0;
@@ -265,7 +366,9 @@ window.onload = function(){
 	gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
 	gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
 	gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
-	
+	gl.uniformMatrix4fv(mCameraWorldLoc, gl.FALSE, cameraWorldMatrix);
+	gl.uniformMatrix3fv(mCameraWorldNormalLoc, gl.FALSE, cameraWorldNormalMatrix);
+
 	var identityMatrix = new Float32Array(16);
 	var yRotationMatrix = new Float32Array(16);
 	var xzRotationMatrix = new Float32Array(16);
@@ -274,12 +377,11 @@ window.onload = function(){
 	var scalingMatrix = new Float32Array(16);
 	var navigationMatrix = new Float32Array(16);
 	var crosshairMatrix = new Float32Array(16);
-	
+
 	var tempMatrix = new Float32Array(16);
-	
+
 	mat4.identity(identityMatrix);
 	mat4.identity(crosshairMatrix);
-	
 	var heading = 0; // Degrees
 
 	// Begin by resetting.
@@ -346,14 +448,14 @@ window.onload = function(){
 			case 40: // down
 				yPos += 0.5
 				break; 
-			case 32: // r - reset
+			case 32: // space - reset
 				yPos = -12;
 				xPos = -8 * 10;
 				zPos = 0;
 				mat4.rotate(rotationMatrix, identityMatrix, glMatrix.toRadian(-heading), [0,1,0]);
 				mat4.mul(viewMatrix, rotationMatrix, viewMatrix);
 				gl.uniformMatrix4fv(mViewLoc, gl.FALSE, viewMatrix);
-			
+
 				fovY = 45;
 				mat4.perspective(projMatrix, glMatrix.toRadian(fovY), canvas.width / canvas.height, 0.1, 1000.0); // fovy, aspect ratio, near, far
 				gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
@@ -420,11 +522,10 @@ window.onload = function(){
 	var loop = function(){
 		gl.clearColor(0.60, 0.7, 0.9, 1.0); // R G B A
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
-
 		theta = performance.now() / 1000 / 6 *  2 * Math.PI;
 
 		// I use two rotation matrices for a more interesting rotation effect.
-		mat4.rotate(xzRotationMatrix, identityMatrix, theta, [1,0,1]); 
+		mat4.rotate(xzRotationMatrix, identityMatrix, theta, [1,0,1]);
 		mat4.rotate(yRotationMatrix, identityMatrix, theta/4, [0,1,0]);
 		mat4.mul(rotationMatrix, yRotationMatrix, xzRotationMatrix);
 
@@ -448,7 +549,14 @@ window.onload = function(){
 			mat4.mul(worldMatrix, translationMatrix, worldMatrix);
 			mat4.mul(worldMatrix, navigationMatrix, worldMatrix);
 
-			
+			// adjust matrices needed for lighting
+			mat4.mul(cameraWorldMatrix, viewMatrix, worldMatrix);
+			gl.uniformMatrix4fv(mCameraWorldLoc, gl.FALSE, cameraWorldMatrix);
+			mat4.invert(cameraWorldNormalMatrixHelper, cameraWorldMatrix);
+			mat4.transpose(cameraWorldNormalMatrixHelper, cameraWorldNormalMatrixHelper);
+			mat3.fromMat4(cameraWorldNormalMatrix, cameraWorldNormalMatrixHelper);
+			gl.uniformMatrix3fv(mCameraWorldNormalLoc, gl.FALSE, cameraWorldNormalMatrix);
+
 			gl.uniformMatrix4fv(mWorldLoc, gl.FALSE, worldMatrix);
 
 
@@ -496,8 +604,7 @@ window.onload = function(){
 			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2 );
 
 		}
-
-		requestAnimationFrame(loop); 
+		requestAnimationFrame(loop);
 	}
 	requestAnimationFrame(loop);
 }
