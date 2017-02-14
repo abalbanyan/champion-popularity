@@ -74,8 +74,8 @@ void main(){
 window.onload = function(){
 	console.log("Starting.")
 	var canvas = document.getElementById('webgl-canvas');
-	canvas.width  = window.innerWidth - 100;
-	canvas.height = window.innerHeight - 100;
+	canvas.width  = window.innerWidth - 80;
+	canvas.height = window.innerHeight - 250;
 
 	var searchBox = document.getElementById("championSearch");
 
@@ -274,50 +274,7 @@ window.onload = function(){
 	 	textureArray.push(gl.createTexture());
 	 	initializeTexture(textureArray[i], imageArray[i]);
 	}
-	///////////////////////////////////////////////////////
-	//TODO: Setup lighting variables
-	var materialProperties = {
-		reflectAmbient: .4,
-		reflectDiffuse: .4,
-		reflectSpecular: .8,
-		smoothnessObj: 40,
-		shininessObj: 0.5
-	};
 
-	var lightPos = vec4.create();
-	vec4.set(lightPos, 30, 30, 34, 1);
-	var lightCol = vec4.create();
-	vec4.set(lightCol, 1, 1, 1, 1);
-	var shapeCol = vec4.create();
-	vec4.set(shapeCol, 0.5, 0.5, 0.5, 0);
-
-	var lights = [
-		{
-			lightPosition: lightPos,
-			lightColor: lightCol,
-			lightAttenuation: 1/100000
-		}
-	];
-
-	var lightPosLoc = gl.getUniformLocation(program, 'lightPosition');
-	var lightColorLoc = gl.getUniformLocation(program, 'lightColor');
-	var shapeColorLoc = gl.getUniformLocation(program, 'shapeColor');
-	var ambientLoc = gl.getUniformLocation(program, 'ambient');
-	var diffusivityLoc = gl.getUniformLocation(program, 'diffusivity');
-	var shininessLoc = gl.getUniformLocation(program, 'shininess');
-	var smoothnessLoc = gl.getUniformLocation(program, 'smoothness');
-	var attenuation_factorLoc = gl.getUniformLocation(program, 'attenuation_factor');
-
-	gl.uniform4fv(lightPosLoc, lightPos);
-	gl.uniform4fv(lightColorLoc, lightCol);
-	gl.uniform4fv(shapeColorLoc, shapeCol);
-	gl.uniform1f(ambientLoc, materialProperties.reflectAmbient);
-	gl.uniform1f(diffusivityLoc, materialProperties.reflectDiffuse);
-	gl.uniform1f(shininessLoc, materialProperties.shininessObj);
-	gl.uniform1f(smoothnessLoc, materialProperties.smoothnessObj);
-	//gl.uniform1fv(attenuation_factorLoc, lights.lightAttenuation);
-
-	//////////////////////////////////////////////////////
 
 	// Generate textures for each of the champion icons.
 	var iconImageArray = [];
@@ -397,6 +354,51 @@ window.onload = function(){
 	gl.uniformMatrix4fv(mProjLoc, gl.FALSE, projMatrix);
 	heading = 0;
 
+		///////////////////////////////////////////////////////
+	//TODO: Setup lighting variables
+	var materialProperties = {
+		reflectAmbient: .8,
+		reflectDiffuse: .4,
+		reflectSpecular: .8,
+		smoothnessObj: 40,
+		shininessObj: 0.5
+	};
+
+	var lightPos = vec4.create();
+	vec4.set(lightPos, 30, 30, 34, 1);
+	var lightCol = vec4.create();
+	vec4.set(lightCol, 1, 1, 1, 1);
+	var shapeCol = vec4.create();
+	vec4.set(shapeCol, 0.5, 0.5, 0.5, 0);
+
+	var lights = [
+		{
+			lightPosition: lightPos,
+			lightColor: lightCol,
+			lightAttenuation: 1/100000
+		}
+	];
+
+	var lightPosLoc = gl.getUniformLocation(program, 'lightPosition');
+	var lightColorLoc = gl.getUniformLocation(program, 'lightColor');
+	var shapeColorLoc = gl.getUniformLocation(program, 'shapeColor');
+	var ambientLoc = gl.getUniformLocation(program, 'ambient');
+	var diffusivityLoc = gl.getUniformLocation(program, 'diffusivity');
+	var shininessLoc = gl.getUniformLocation(program, 'shininess');
+	var smoothnessLoc = gl.getUniformLocation(program, 'smoothness');
+	var attenuation_factorLoc = gl.getUniformLocation(program, 'attenuation_factor');
+
+	gl.uniform4fv(lightPosLoc, lightPos);
+	gl.uniform4fv(lightColorLoc, lightCol);
+	gl.uniform4fv(shapeColorLoc, shapeCol);
+	gl.uniform1f(ambientLoc, materialProperties.reflectAmbient);
+	gl.uniform1f(diffusivityLoc, materialProperties.reflectDiffuse);
+	gl.uniform1f(shininessLoc, materialProperties.shininessObj);
+	gl.uniform1f(smoothnessLoc, materialProperties.smoothnessObj);
+	//gl.uniform1fv(attenuation_factorLoc, lights.lightAttenuation);
+
+	//////////////////////////////////////////////////////
+
 
 	document.onkeydown = function(e){
 		e = e || window.event;
@@ -411,14 +413,26 @@ window.onload = function(){
 				if(champIndex <70){
 					xPos = champIndex * -4;
 					console.log("xPos:",xPos); 
-					yPos = +3;
+				//	yPos = +3;
 				}
 				else{
 					xPos =  -4 * (champIndex-70);
 					console.log("xPos:",xPos);
-					yPos = -(-3 + 13);
+				//	yPos = -(-3 + 13);
 				}
 
+				break;
+			case 66: // b brighter
+				if(materialProperties.reflectAmbient > 0){
+					materialProperties.reflectAmbient-= 0.1;
+					gl.uniform1f(ambientLoc, materialProperties.reflectAmbient);
+				}
+				break;
+			case 68: // d darker
+				if(materialProperties.reflectAmbient < 1.0){
+					materialProperties.reflectAmbient+= 0.1;
+					gl.uniform1f(ambientLoc, materialProperties.reflectAmbient);
+				}
 				break;
 			case 187: // n (narrower fov)
 				fovY--;
@@ -587,9 +601,9 @@ window.onload = function(){
 
 			// Keep the role icons centered.
 			if(i < 3)
-				mat4.translate(translationMatrix, identityMatrix, [i*4, 15, 0]);
+				mat4.translate(translationMatrix, identityMatrix, [i*4, 18, 10]);
 			else
-				mat4.translate(translationMatrix, identityMatrix, [(2-i)*4, 15, 0]);
+				mat4.translate(translationMatrix, identityMatrix, [(2-i)*4, 18, 10]);
 
 			mat4.scale(scalingMatrix, identityMatrix, [0.1,0.1,0.1]);
 			mat4.mul(worldMatrix, scalingMatrix, worldMatrix);
