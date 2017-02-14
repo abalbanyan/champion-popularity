@@ -10,6 +10,8 @@ sphere, the more popular that particular role is for that champion.
 
 The scene can be explored using the ijkm keys, and can also be made brighter using the b and d keys. The brightness adjustment was implemented using ambient lighting. More controls are described on the webpage itself.
 
+There is also a point light located at [30,30,30]. Diffuse and specular lighting were added to each of the objects in the scene.
+
 The textures all are obtained from the League of Legends game directory.
 
 
