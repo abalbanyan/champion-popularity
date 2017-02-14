@@ -62,8 +62,8 @@ void main(){
 	for( int i = 0; i < N_LIGHTS; i++ )
   {
     float attenuation_multiplier = 1.0 / (1.0 + 0.5 * (dist[i] * dist[i]));
-    float diffuse  = 0.0; //TODO
-    float specular = 0.0; //TODO
+		float diffuse  = max(dot(L[i], N), 0.0); // max to make sure that negative values don't mess up the lighting
+    float specular = pow(max(dot(H[i], N), 0.0), smoothness); // max to make sure that negative values don't mess up the lighting
 
     gl_FragColor.xyz += attenuation_multiplier * (tex_color.xyz * diffusivity * diffuse  + lightColor[i].xyz * shininess * specular );
   }
@@ -115,10 +115,10 @@ window.onload = function(){
 	////////////////// Icon generation. /////////////////////
 	// brutal hack
 	var sphereVertices = [
-		1.0, 1.0, 1.0,    
-		1.0, -1.0, 1.0,    
-		-1.0, -1.0, 1.0,   
-		-1.0, 1.0, 1.0 
+		1.0, 1.0, 1.0,
+		1.0, -1.0, 1.0,
+		-1.0, -1.0, 1.0,
+		-1.0, 1.0, 1.0
 	];
 	var sphereIndices = [
 		1,0,2,3,2,0
@@ -130,10 +130,10 @@ window.onload = function(){
 		1,0
 	]
 	var normalData = [
-		1.0, 1.0, 1.0,    
-		1.0, -1.0, 1.0,    
-		-1.0, -1.0, 1.0,   
-		-1.0, 1.0, 1.0 
+		1.0, 1.0, 1.0,
+		1.0, -1.0, 1.0,
+		-1.0, -1.0, 1.0,
+		-1.0, 1.0, 1.0
 	]
 
 	var vertexOffset = sphereVertices.length;
@@ -146,7 +146,7 @@ window.onload = function(){
 	//var sphereVertices = [];
     //var normalData = [];
     //var textureCoordData = [];
-    //var sphereIndices = []; 
+    //var sphereIndices = [];
     var latitudeBands = 30;
     var longitudeBands = 30;
     var radius = 10;
@@ -173,7 +173,7 @@ window.onload = function(){
 	        textureCoordData.push(v);
 	        sphereVertices.push(radius * x);
 	        sphereVertices.push(radius * y);
-	        sphereVertices.push(radius * z);       
+	        sphereVertices.push(radius * z);
 	    }
     }
     for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
@@ -412,7 +412,7 @@ window.onload = function(){
 
 				if(champIndex <70){
 					xPos = champIndex * -4;
-					console.log("xPos:",xPos); 
+					console.log("xPos:",xPos);
 				//	yPos = +3;
 				}
 				else{
@@ -461,7 +461,7 @@ window.onload = function(){
 				break;
 			case 40: // down
 				yPos += 0.5
-				break; 
+				break;
 			case 32: // space - reset
 				yPos = -12;
 				xPos = -8 * 10;
@@ -535,7 +535,7 @@ window.onload = function(){
 	// Render Loop
 	var loop = function(){
 		gl.clearColor(0.60, 0.7, 0.9, 1.0); // R G B A
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		theta = performance.now() / 1000 / 6 *  2 * Math.PI;
 
 		// I use two rotation matrices for a more interesting rotation effect.
