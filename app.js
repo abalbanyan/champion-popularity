@@ -149,6 +149,10 @@ window.onload = function(){
         sphereIndices.push(first + 1);
       }
     }
+
+    for(var i = indiceOffset; i < sphereIndices.length; i++){
+     	sphereIndices[i] += 4;
+    }
     /////////////////////////////////////////////////////////
 
 	var vertexBuffer = gl.createBuffer(); // Chunk of memory on GPU that is ready to use.
@@ -381,14 +385,14 @@ window.onload = function(){
 
 	}
 
-
+	console.log("sphereindices: " , indiceOffset);
 
 
 	var globalScale = 0.2;
 
 	// Render Loop
 	var loop = function(){
-		gl.clearColor(0.75, 0.85, 0.8, 1.0); // R G B A
+		gl.clearColor(0.60, 0.7, 0.9, 1.0); // R G B A
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); 
 
 		theta = performance.now() / 1000 / 6 *  2 * Math.PI;
@@ -425,7 +429,7 @@ window.onload = function(){
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, textureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
-			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset, gl.UNSIGNED_SHORT, indiceOffset * 2 );
 
 		}
 		// Draw each of the icons
@@ -440,7 +444,7 @@ window.onload = function(){
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, iconTextureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
-			gl.drawElements(gl.TRIANGLES, indiceOffset , gl.UNSIGNED_SHORT, 0);
+			gl.drawElements(gl.TRIANGLES, indiceOffset, gl.UNSIGNED_SHORT, 0);
 		}
 
 		// Draw each of the role for reference
@@ -457,7 +461,7 @@ window.onload = function(){
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, roleTextureArray[i]);
 			gl.uniform1i(gl.getUniformLocation(program, 'textureSampler'), 0);
-			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2);
+			gl.drawElements(gl.TRIANGLES, sphereIndices.length - indiceOffset , gl.UNSIGNED_SHORT, indiceOffset * 2 );
 
 		}
 
