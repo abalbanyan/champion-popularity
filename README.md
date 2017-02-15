@@ -7,9 +7,9 @@ championdata.js.
 
 We illustrate the data by drawing differently-sized, rotating spheres above each of the champion icons. Each of the spheres
 has a texture that corresponds to one of the roles that champion can play (e.g. Marksman, Middle, Top, etc.). The larger the 
-sphere, the more popular that particular role is for that champion.
+sphere, the more popular that particular role is for that champion. This information should allow players to better decide what role to choose for the champions they wish to play, by comparing the relative sizes of the spheres between different champions/roles.
 
-The scene can be explored using the ijkm keys, and can also be made brighter using the b and d keys. The brightness adjustment was implemented using ambient lighting. More controls are described on the webpage itself.
+The scene can be explored using the ijkm keys, and can also be made brighter using the b and d keys. The brightness adjustment was implemented using ambient lighting. Specific champions can also be searched for using the text box on the webpage. Additional controls are described on the webpage itself.
 
 There is also a point light located at [30,30,30]. Diffuse and specular lighting were added to each of the objects in the scene.
 
